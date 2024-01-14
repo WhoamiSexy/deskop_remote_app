@@ -1,4 +1,6 @@
 # Socket
+import pickle # Import thư viện pickle để chuyển đổi dữ liệu sang dạng nhị phân.
+import os
 import time
 import socket
 from pynput import mouse, keyboard
@@ -82,16 +84,23 @@ class Dekstop(QMainWindow):
         self.container = QWidget(self.window2)
         self.window2.setWindowTitle("[Server] Chụp ảnh và Thao Tác File: " + str(randint(99999, 999999)))
 
-        self.label3 = QLabel(self.container)  # Make label3 a child of container
+        self.label3 = QLabel(self.container)  # Tạo container để chứa nút
         self.label3.setPixmap(self.pixmap)
         
         self.CatchImage = QPushButton(self.window2) # Nút chụp ảnh
-        self.CatchImage.move(150, 100)
-        self.CatchImage.resize(300, 90)
+        self.CatchImage.move(150, 150)
+        self.CatchImage.resize(300, 45)
         self.CatchImage.setStyleSheet("font-size: 25px")
         self.CatchImage.setText("Chụp ảnh")
         self.Image_catched = None
         self.CatchImage.clicked.connect(self.Catchimage)
+
+        self.SendFile = QPushButton(self.window2) # Nút gửi file
+        self.SendFile.move(70, 5)
+        self.SendFile.resize(460, 45)
+        self.SendFile.setStyleSheet("font-size: 25px")
+        self.SendFile.setText("Gửi file")
+        self.SendFile.clicked.connect(self.File_to_server)
 
         self.window2.setGeometry(QRect(0, -5, 600, 200))
         self.window2.setFixedSize(600, 200)
@@ -112,20 +121,20 @@ class Dekstop(QMainWindow):
     # Thread đổi ảnh _________________________________________________________________________________________________
     def MainProgram(self):
         # Khởi tạo kết nối
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
-        if(self.check_connection(client_socket)):
-            with client_socket:
+        if(self.check_connection(self.client_socket)):
+            with self.client_socket:
                 # Thread gửi phím     
-                self.thread_keyboard = Thread(target = lambda: self.putkeyboard(client_socket), daemon = True)
+                self.thread_keyboard = Thread(target = lambda: self.putkeyboard(self.client_socket), daemon = True)
                 self.thread_keyboard.start()
                 # Thread gửi chuột
-                self.thread_mouse = Thread(target = lambda: self.putkeymouse(client_socket), daemon = True)         
+                self.thread_mouse = Thread(target = lambda: self.putkeymouse(self.client_socket), daemon = True)         
                 self.thread_mouse.start()
 
                 try:
                     while True:
-                        img_bytes = client_socket.recv(9999999)
+                        img_bytes = self.client_socket.recv(9999999)
                         self.Image_catched = img_bytes
                         self.pixmap.loadFromData(img_bytes)
                         self.label2.setPixmap(self.pixmap)
@@ -133,14 +142,27 @@ class Dekstop(QMainWindow):
                         self.label2.setAlignment(Qt.AlignCenter)
                         self.label2.setFixedSize(1920, 1080)       
                 except:
-                    client_socket.close()
+                    self.client_socket.close()
         else:
             self.newWindow.close()
             self.ip.clear()
             self.ip.setStyleSheet("font-size: 30px")
             self.ip.setPlaceholderText("Wrong IP or PORT")
 
-    # Chụp ảnh _________________________________________________________________________________________________
+    # Gửi file qua server_____________________________________________________________________________________________
+    def File_to_server(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        filename, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;JPEG (*.jpg *.jpeg);;PNG (*.png)", options=options)
+        if filename:
+            with open(filename, 'rb') as f:
+                file_content = f.read()
+                file_name = os.path.basename(filename)
+                data = {'type':'file', 'file_name': file_name, 'file_content': file_content}
+                serialized_data = pickle.dumps(data)
+                self.client_socket.send(serialized_data)
+
+    # Chụp ảnh_________________________________________________________________________________________________
     def Catchimage(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -148,6 +170,7 @@ class Dekstop(QMainWindow):
         if filename:
             with open(filename, 'wb') as f:
                 f.write(self.Image_catched)
+                
     # Thread gửi kí tự _______________________________________________________________________________________________
     def putkeyboard(self, client_socket):
         on_release = True
