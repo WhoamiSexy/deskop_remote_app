@@ -16,7 +16,7 @@ import threading
 from threading import Thread #Import class Thread để tạo và quản lý các thread.
 # PyQt5
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QLabel, QPushButton, QAction, QMessageBox, QLineEdit,  QVBoxLayout, QDialog, QFileDialog
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QLabel, QPushButton, QAction, QMessageBox, QLineEdit,  QVBoxLayout, QDialog, QFileDialog, QListWidget, QListWidgetItem
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QRect, Qt, pyqtSlot
 from PyQt5.QtNetwork import QTcpSocket
@@ -102,6 +102,13 @@ class Dekstop(QMainWindow):
         self.SendFile.setText("Gửi file")
         self.SendFile.clicked.connect(self.File_to_server)
 
+        self.ReFile = QPushButton(self.window2) # Nút nhận file
+        self.ReFile.move(70, 55)
+        self.ReFile.resize(460, 45)
+        self.ReFile.setStyleSheet("font-size: 25px")
+        self.ReFile.setText("Nhận file")
+        self.ReFile.clicked.connect(self.ReFile_From_server)
+
         self.window2.setGeometry(QRect(0, -5, 600, 200))
         self.window2.setFixedSize(600, 200)
         self.window2.show()
@@ -134,13 +141,27 @@ class Dekstop(QMainWindow):
 
                 try:
                     while True:
-                        img_bytes = self.client_socket.recv(9999999)
-                        self.Image_catched = img_bytes
-                        self.pixmap.loadFromData(img_bytes)
-                        self.label2.setPixmap(self.pixmap)
-                        self.label2.setScaledContents(True)
-                        self.label2.setAlignment(Qt.AlignCenter)
-                        self.label2.setFixedSize(1920, 1080)       
+                        data_nhận = self.client_socket.recv(9999999)
+                        data = pickle.loads(data_nhận)
+                        if data['type'] == 'image':
+                            img_bytes = data['files']
+                            self.Image_catched = img_bytes
+                            self.pixmap.loadFromData(img_bytes)
+                            self.label2.setPixmap(self.pixmap)
+                            self.label2.setScaledContents(True)
+                            self.label2.setAlignment(Qt.AlignCenter)
+                            self.label2.setFixedSize(1920, 1080)
+                        elif data['type'] == 'file_list':
+                            self.file_list = data['data']
+                            layout = QVBoxLayout(self.window2)
+                            self.listWidget = QListWidget()
+                            for file in self.file_list:
+                                item = QListWidgetItem(file)
+                                self.listWidget.addItem(item)
+                            self.listWidget.itemClicked.connect(self.on_item_clicked)
+                            layout.addWidget(self.listWidget)
+                            self.setLayout(layout)
+
                 except:
                     self.client_socket.close()
         else:
@@ -148,6 +169,22 @@ class Dekstop(QMainWindow):
             self.ip.clear()
             self.ip.setStyleSheet("font-size: 30px")
             self.ip.setPlaceholderText("Wrong IP or PORT")
+
+    
+    # Gửi yêu cầu lấy file từ server_________________________________________________________________________________
+    def ReFile_From_server(self): # Yêu cầu lấy danh sách file từ server
+        data = {'type': 'file_list_request'}
+        serialized_data = pickle.dumps(data)
+        self.client_socket.send(serialized_data)
+
+    def on_item_clicked(self, item):
+        chosen_file = item.text()
+        self.request_file_from_server(chosen_file)
+
+    def request_file_from_server(self, file_name):
+        data = {'type': 'file_request', 'file_name': file_name}
+        serialized_data = pickle.dumps(data)
+        self.client_socket.send(serialized_data)
 
     # Gửi file qua server_____________________________________________________________________________________________
     def File_to_server(self):
@@ -158,7 +195,7 @@ class Dekstop(QMainWindow):
             with open(filename, 'rb') as f:
                 file_content = f.read()
                 file_name = os.path.basename(filename)
-                data = {'type':'file', 'file_name': file_name, 'file_content': file_content}
+                data = {'type':'file_for_re', 'file_name': file_name, 'file_content': file_content}
                 serialized_data = pickle.dumps(data)
                 self.client_socket.send(serialized_data)
 
