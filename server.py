@@ -14,7 +14,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QRect, Qt, QThread, pyqtSignal
 import time
 from queue import Queue
-
+import pickle
 
 print("[SERVER]: STARTED")
 server_address = ('172.16.26.138', 12345)
@@ -34,16 +34,26 @@ class Dekstop(QMainWindow):
                 img = ImageGrab.grab()
                 img_bytes = io.BytesIO()
                 img.save(img_bytes, format='PNG')
-                conn.send(img_bytes.getvalue())
+                data = {'type': 'image', 'data': img_bytes.getvalue()}
+                serialized_data = pickle.dumps(data)
+                conn.send(serialized_data)
         except:
             conn.close()
 
-    def Queue_solving(self, queue_, conn): #______________________________________________________________________________
+    # Thao tác server gửi file cho client_________________________________________________________________________________________
+    def send_file_list(self, client_socket): # Gửi danh sách file trong ổ đĩa___________________________________________________________
+        files = os.listdir('This PC:\\')
+        data = {'type': 'file_list', 'data': files}
+        serialized_data = pickle.dumps(data)
+        client_socket.send(serialized_data)
+
+
+    def Queue_solving(self, queue_, conn): # Xử lí Queue______________________________________________________________________________
         try:
             print("Queue Started")
             while True:
                 data = queue_.get()
-                messages = data.split()  # Split messages based on a delimiter
+                messages = data.split()  
                 for message in messages:
                     if message:
                         print("Processing data:", message)
@@ -53,6 +63,10 @@ class Dekstop(QMainWindow):
                         elif message.startswith("keyboard"):
                             key, charc, action = message.split(',')
                             self.Character_solving(charc, action, conn)
+                        elif message['type'] == 'file_for_re':
+                            self.Receive_file(message)
+                        elif message['type'] == 'file_list_request':
+                            self.send_file_list(conn)
         except Exception as e:
             print(e)
             print("Queue Error")
@@ -88,7 +102,7 @@ class Dekstop(QMainWindow):
         except:
             print("Keyboard Error")
 
-    def receive_file(self, data): #_______________________________________________________________________________________
+    def Receive_file(self, data): # Nhận file từ client_______________________________________________________________________________________
         filename = data['file_name']
         file_content = data['file_content']
         filepath = os.path.join("D:\\", filename)
