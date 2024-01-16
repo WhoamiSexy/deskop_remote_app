@@ -21,7 +21,7 @@ import pickle
 
 print("[SERVER]: STARTED")
 
-server_address = ('192.168.0.103', 1234)
+server_address = ('localhost', 1234)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                
 sock.bind(server_address) # Server  
 sock.listen(5)
@@ -59,7 +59,7 @@ class Dekstop(QMainWindow):
         client_socket.send(serialized_data)
 
 
-    def Mouse_solving(self, data, conn): # Xử lí Queue______________________________________________________________________________
+    def Mouse_solving(self, data):
         try:
             if data['event_type'] == 'on_move':
                 mouse.position = (int(data['x']), int(data['y']))

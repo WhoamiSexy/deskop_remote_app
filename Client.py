@@ -127,10 +127,10 @@ class Dekstop(QMainWindow):
         if(self.check_connection(client_socket)):
             with client_socket:
                 # Thread gửi phím     
-                self.thread_keyboard = Thread(target = lambda: self.putkeyboard(self.client_socket), daemon = True)
+                self.thread_keyboard = Thread(target = lambda: self.putkeyboard(client_socket), daemon = True)
                 self.thread_keyboard.start()
                 # Thread gửi chuột
-                self.thread_mouse = Thread(target = lambda: self.putkeymouse(self.client_socket), daemon = True)         
+                self.thread_mouse = Thread(target = lambda: self.putkeymouse(client_socket), daemon = True)         
                 self.thread_mouse.start()
 
                 try:
