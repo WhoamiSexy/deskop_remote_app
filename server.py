@@ -65,7 +65,7 @@ class Dekstop(QMainWindow):
                 mouse.scroll(0, int(data['dy'])*10)
         except Exception as e:
             print("Mouse Error: ", e)
-    def Character_solving(self, data, conn):
+    def Character_solving(self, data):
         try:
             if data['action'] == 'on_press':
                 keyboard.press(data['key_name'])
@@ -101,8 +101,8 @@ class Dekstop(QMainWindow):
                         data = pickle.loads(data_received)
                         print(data)
                         if data['type'] == 'keyboard':
-                            self.Character_solving(data, conn)
-                        if data['type'] == 'mouse':
+                            self.Character_solving(data)
+                        elif data['type'] == 'mouse':
                             self.Mouse_solving(data)
                         elif data['type'] == 'file_re':
                             self.Receive_file(data)
