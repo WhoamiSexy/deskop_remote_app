@@ -36,7 +36,6 @@ class Dekstop(QMainWindow):
 
     def ChangeImage(self, conn):
         try:
-            old_img = None
             while True:
                 img = ImageGrab.grab()
                 img_bytes = io.BytesIO()
@@ -64,7 +63,7 @@ class Dekstop(QMainWindow):
                 mouse.scroll(0, int(data['dy'])*10)
         except Exception as e:
             print("Mouse Error: ", e)
-    def Character_solving(self, data, conn):
+    def Character_solving(self, data):
         try:
             if data['action'] == 'on_press':
                 keyboard.press(data['key_name'])
@@ -74,11 +73,33 @@ class Dekstop(QMainWindow):
         except Exception as e:
             print("Keyboard Error: ", traceback.format_exc())
     
-    def Receive_file(self, data):
-        filename = data['file_name']
-        filepath = os.path.join("D:\\", filename)
-        receive_thread = threading.Thread(target=self.receive_file_content, args=(filepath,))
-        receive_thread.start()
+    # def Receive_file(self, data):
+    #     filename = data['file_name']
+    #     filepath = os.path.join("D:\\", filename)
+    #     receive_thread = threading.Thread(target=self.receive_file_content, args=(filepath,))
+    #     receive_thread.start()
+
+    def receive_file(client_socket):
+        try:
+            # Nhận thông tin về tệp từ client
+            file_info = pickle.loads(client_socket.recv(1024))
+            
+            # Trích xuất thông tin tệp
+            file_name = file_info['file_name']
+            save_path = file_info['save_path']
+
+            # Nhận và lưu từng phần của file
+            with open(save_path, 'wb') as file:
+                while True:
+                    file_chunk = client_socket.recv(1024)
+                    if not file_chunk:
+                        break
+
+                    file.write(file_chunk)
+
+            print(f"File '{file_name}' received and saved at: {save_path}")
+        except Exception as e:
+            print(f"Error receiving file: {e}")
 
     def receive_file_content(self, filepath):
         with open(filepath, 'wb') as f:
@@ -106,10 +127,10 @@ class Dekstop(QMainWindow):
                         data = pickle.loads(data_received)
                         print(data)
                         if data['type'] == 'keyboard':
-                            self.Character_solving(data, conn)
-                        if data['type'] == 'mouse':
+                            self.Character_solving(data)
+                        elif data['type'] == 'mouse':
                             self.Mouse_solving(data)
-                        if data['type'] == 'file_re':
+                        elif data['type'] == 'file':
                             self.Receive_file(data)
                 except Exception as e:
                     print('mainError: ', e)
