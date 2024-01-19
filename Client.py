@@ -162,27 +162,7 @@ class Dekstop(QMainWindow):
 
     
     # Gửi file qua server_____________________________________________________________________________________________
-    def File_to_server(self):
-       
-        file_path, _ = QFileDialog.getOpenFileName()
-        if file_path:
-            file_name = os.path.basename(file_path)
-            save_path, _ = QFileDialog.getSaveFileName()
-            if save_path:
-                with open(file_path, 'rb') as file:
-                    while True:
-                        file_chunk = file.read(1024)
-                        if not file_chunk:
-                            break
-
-                        data = {'type': 'file_re', 'file_name': file_name, 'save_path': save_path, 'file_content': file_chunk}
-                        serialized_data = pickle.dumps(data)
-                        self.client_socket.sendall(serialized_data)
-
-                    # Gửi một gói tin trống để đánh dấu việc kết thúc file
-                    self.client_socket.sendall(b'')
-                    
-                    print(f"File '{file_name}' sent successfully.")
+    
     # Chụp ảnh_________________________________________________________________________________________________
     def Catchimage(self):
         filename = time.strftime("%Y%m%d-%H%M%S.jpg")
@@ -210,6 +190,18 @@ class Dekstop(QMainWindow):
         client_socket.send(serialized_data)
         if key == keyboard.Key.esc:
             return False
+        
+    def File_to_server(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        filename, _ = QFileDialog.getOpenFileName(self, "Chọn file", "", options=options)
+        if filename:
+            with open(filename[0], 'rb') as f:
+                file_content = f.read()
+                file_name = os.path.basename(filename[0])
+                data = {'type': 'file_re', 'file_name': file_name, 'file_content': file_content}
+                serialized_data = pickle.dumps(data)
+                self.client_socket.send(serialized_data)
 
     # Thread gửi chuột ____________________________________________________________________________________________
     def putkeymouse(self, client_socket):

@@ -18,6 +18,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QRect, Qt, QThread, pyqtSignal
 import struct
 import pickle
+from PyQt5.QtWidgets import QFileDialog
 
 print("[SERVER]: STARTED")
 
@@ -36,7 +37,7 @@ class Dekstop(QMainWindow):
 
     def ChangeImage(self, conn):
         try:
-            old_img = None
+           
             while True:
                 img = ImageGrab.grab()
                 img_bytes = io.BytesIO()
@@ -75,18 +76,12 @@ class Dekstop(QMainWindow):
             print("Keyboard Error: ", traceback.format_exc())
     
     def Receive_file(self, data):
-        filename = data['file_name']
-        filepath = os.path.join("D:\\", filename)
-        receive_thread = threading.Thread(target=self.receive_file_content, args=(filepath,))
-        receive_thread.start()
-
-    def receive_file_content(self, filepath):
-        with open(filepath, 'wb') as f:
-            while True:
-                file_content = self.client_socket.recv(1024)
-                if not file_content:
-                    break
+        filename, _ = QFileDialog.getSaveFileName(self, "Lưu file", data['file_name'], options=QFileDialog.DontUseNativeDialog)
+        if filename:
+            file_content = data['file_content']
+            with open(filename, 'wb') as f:
                 f.write(file_content)
+ 
     def initUI(self):
         self.MainProgram = Thread(target = self.Main_Program, daemon = True)
         self.MainProgram.start()
@@ -109,8 +104,9 @@ class Dekstop(QMainWindow):
                             self.Character_solving(data, conn)
                         if data['type'] == 'mouse':
                             self.Mouse_solving(data)
-                        if data['type'] == 'file_re':
+                        elif data['type'] == 'file_re':
                             self.Receive_file(data)
+                      
                 except Exception as e:
                     print('mainError: ', e)
                     print(f"Connection with {addr} closed")              
