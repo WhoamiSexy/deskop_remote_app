@@ -76,12 +76,21 @@ class Dekstop(QMainWindow):
             print("Keyboard Error: ", traceback.format_exc())
     
     def Receive_file(self, data):
-        filename, _ = QFileDialog.getSaveFileName(self, "Lưu file", data['file_name'], options=QFileDialog.DontUseNativeDialog)
-        if filename:
-            file_content = data['file_content']
-            with open(filename, 'wb') as f:
-                f.write(file_content)
- 
+        file_name = data['file_name']
+        save_path = data['save_path']
+        file_size = data['file_size']
+
+        # Nhận file theo chunks
+        with open(save_path, 'wb') as file:
+            received_size = 0
+            while received_size < file_size:
+                data_received = self.client_socket.recv(1024)
+                received_size += len(data_received)
+                file.write(data_received)
+
+        print(f"File '{file_name}' received and saved at: {save_path}")
+    
+    
     def initUI(self):
         self.MainProgram = Thread(target = self.Main_Program, daemon = True)
         self.MainProgram.start()
@@ -97,7 +106,7 @@ class Dekstop(QMainWindow):
                 self.output_thread.start()  
                 try:
                     while(True):
-                        data_received = conn.recv(999999)
+                        data_received = conn.recv(1024)
                         data = pickle.loads(data_received)
                         print(data)
                         if data['type'] == 'keyboard':
