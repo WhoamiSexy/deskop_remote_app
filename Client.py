@@ -163,24 +163,26 @@ class Dekstop(QMainWindow):
     
     # Gửi file qua server_____________________________________________________________________________________________
     def File_to_server(self):
-        try:
-            options = QFileDialog.Options()
-            options |= QFileDialog.DontUseNativeDialog
-            filename = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "", options = options)
-            if filename:
-                file_name = os.path.basename(filename[0])
-                data = {'type':'file_re', 'file_name': file_name}
-                serialized_data = pickle.dumps(data)
-                self.client_socket.send(serialized_data)
-
-                with open(filename[0], 'rb') as f:
+       
+        file_path, _ = QFileDialog.getOpenFileName()
+        if file_path:
+            file_name = os.path.basename(file_path)
+            save_path, _ = QFileDialog.getSaveFileName()
+            if save_path:
+                with open(file_path, 'rb') as file:
                     while True:
-                        file_content = f.read(1024)
-                        if not file_content:
+                        file_chunk = file.read(1024)
+                        if not file_chunk:
                             break
-                        self.client_socket.send(file_content)
-        except Exception as e:
-            print('Send file Error: ', e)
+
+                        data = {'type': 'file_re', 'file_name': file_name, 'save_path': save_path, 'file_content': file_chunk}
+                        serialized_data = pickle.dumps(data)
+                        self.client_socket.sendall(serialized_data)
+
+                    # Gửi một gói tin trống để đánh dấu việc kết thúc file
+                    self.client_socket.sendall(b'')
+                    
+                    print(f"File '{file_name}' sent successfully.")
     # Chụp ảnh_________________________________________________________________________________________________
     def Catchimage(self):
         filename = time.strftime("%Y%m%d-%H%M%S.jpg")
@@ -203,7 +205,7 @@ class Dekstop(QMainWindow):
         client_socket.send(serialized_data)
         
     def keyReleased(self, key,client_socket):
-        data = {'type': 'keyboard', 'action': 'on_press', 'key_name': key}
+        data = {'type': 'keyboard', 'action': 'on_release', 'key_name': key}
         serialized_data = pickle.dumps(data)
         client_socket.send(serialized_data)
         if key == keyboard.Key.esc:
