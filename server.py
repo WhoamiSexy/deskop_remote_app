@@ -121,13 +121,14 @@ class Dekstop(QMainWindow):
                             self.Character_solving(data, self.conn)
                         if data['type'] == 'mouse':
                             self.Mouse_solving(data)
-                        if data['type'] == 'file_re':
-                            self.Receive_file(data)
+                        
                         if data['type'] == 'file_check':
                             length = self.conn.recv(4)  # Assume that the length of the pickled object is sent first
                             length = struct.unpack('!I', length)[0]
                             data_received = self.recvall(self.conn, length)
                             data = pickle.loads(data_received)
+                            if data['type'] == 'file_re':
+                                self.Receive_file(data)
                 except Exception as e:
                     print('mainError: ', e)
                     print(f"Connection with {self.addr} closed")              
